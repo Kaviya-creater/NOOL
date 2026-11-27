@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NOOL — AI Studio & Image Enhancer</title>
+<style>
+  :root {
+    --brand: #8a4b2a;
+    --brand-dark: #5e3018;
+    --bg: #faf7f2;
+    --card: #ffffff;
+    --text: #2b2118;
+    --muted: #7a6f63;
+    --border: #e6ddd2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    padding: 28px 20px 8px;
+    text-align: center;
+  }
+  header h1 {
+    margin: 0 0 4px;
+    font-size: 1.6rem;
+    color: var(--brand-dark);
+  }
+  header p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+
+  .tabs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px 0;
+  }
+  .tab-btn {
+    padding: 10px 20px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .tab-btn.active {
+    background: var(--brand);
+    color: white;
+    border-color: var(--brand);
+  }
+
+  .panel { display: none; max-width: 620px; margin: 0 auto 60px; padding: 0 20px; }
+  .panel.active { display: block; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+  }
+  label { display: block; font-size: 0.85rem; color: var(--muted); margin: 14px 0 6px; }
+  input[type=text], select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    font-size: 0.95rem;
+    background: #fffefc;
+  }
+  textarea { resize: vertical; min-height: 70px; }
+
+  .row { display: flex; gap: 12px; }
+  .row > div { flex: 1; }
+
+  button.primary {
+    margin-top: 20px;
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 10px;
+    background: var(--brand);
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.primary:hover { background: var(--brand-dark); }
+  button.primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 14px;
+    padding: 30px;
+    text-align: center;
+    color: var(--muted);
+    cursor: pointer;
+    margin-top: 6px;
+  }
+  .dropzone.drag { border-color: var(--brand); color: var(--brand); }
+
+  .result {
+    margin-top: 22px;
+    text-align: center;
+  }
+  .result img {
+    max-width: 100%;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+  .badge {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #f1e8dc;
+    color: var(--brand-dark);
+  }
+  .prompt-preview {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-align: left;
+    background: #f8f4ee;
+    padding: 10px 12px;
+    border-radius: 8px;
+  }
+  .spinner {
+    display: none;
+    margin: 20px auto 0;
+    width: 28px; height: 28px;
+    border: 3px solid var(--border);
+    border-top-color: var(--brand);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error { color: #b3261e; margin-top: 12px; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>NOOL — AI Studio &amp; Image Enhancer</h1>
+  <p>Design your garment with AI, or sharpen a rough reference photo for your artisan.</p>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="studio">AI Design Studio</button>
+  <button class="tab-btn" data-tab="enhancer">AI Image Enhancer</button>
+  <button class="tab-btn" data-tab="weavedraft">Weaving Draft</button>
+</div>
+
+<!-- AI STUDIO PANEL -->
+<div class="panel active" id="studio">
+  <div class="card">
+    <label>Garment type</label>
+    <select id="garment_type">
+      <option value="saree">Saree</option>
+      <option value="kurta">Kurta</option>
+      <option value="blouse">Blouse</option>
+      <option value="lehenga">Lehenga</option>
+      <option value="shirt">Shirt</option>
+    </select>
+
+    <div class="row">
+      <div>
+        <label>Fabric</label>
+        <input type="text" id="fabric" placeholder="e.g. silk, cotton, linen" />
+      </div>
+      <div>
+        <label>Colour</label>
+        <input type="text" id="colour" placeholder="e.g. maroon, mustard yellow" />
+      </div>
+    </div>
+
+    <label>Embroidery / detailing</label>
+    <input type="text" id="embroidery" placeholder="e.g. peacock motif, zari border" />
+
+    <label>Describe your idea (optional — overrides fields above if filled)</label>
+    <textarea id="custom_prompt" placeholder="e.g. a red silk saree with a gold peacock embroidered border, festive look"></textarea>
+
+    <button class="primary" id="generateBtn">✨ Generate Design</button>
+    <div class="spinner" id="studioSpinner"></div>
+    <div class="error" id="studioError"></div>
+
+    <div class="result" id="studioResult"></div>
+  </div>
+</div>
+
+<!-- ENHANCER PANEL -->
+<div class="panel" id="enhancer">
+  <div class="card">
+    <label>Upload a reference photo (blurry, low-res, old, or a screenshot)</label>
+    <div class="dropzone" id="dropzone">
+      <div id="dropzoneText">Click to choose an image, or drag one here</div>
+    </div>
+    <input type="file" id="fileInput" accept="image/png, image/jpeg, image/webp" style="display:none" />
+
+    <label>Upscale factor</label>
+    <select id="scale">
+      <option value="2">2x</option>
+      <option value="4">4x</option>
+    </select>
+
+    <button class="primary" id="enhanceBtn" disabled>🪄 Enhance Image</button>
+    <div class="spinner" id="enhSpinner"></div>
+    <div class="error" id="enhError"></div>
+
+    <div class="result" id="enhResult"></div>
+  </div>
+</div>
+
+<!-- WEAVING DRAFT PANEL -->
+<div class="panel" id="weavedraft">
+  <div class="card">
+    <p style="margin:0 0 14px;color:var(--muted);font-size:0.9rem;">
+      Turn a design into a loom-ready graph-paper draft, with a feasibility
+      score, before an artisan commits to weaving it.
+    </p>
+
+    <button class="primary" id="useLastBtn" style="margin-top:0;background:var(--card);color:var(--brand);border:1px solid var(--brand);" disabled>
+      Use my last generated design
+    </button>
+
+    <label style="margin-top:16px;">...or upload a design/reference image</label>
+    <div class="dropzone" id="wdDropzone">
+      <div id="wdDropzoneText">Click to choose an image, or drag one here</div>
+    </div>
+    <input type="file" id="wdFileInput" accept="image/png, image/jpeg, image/webp" style="display:none" />
+
+    <div class="row" style="margin-top:14px;">
+      <div>
+        <label>Colours</label>
+        <select id="wdColors">
+          <option value="4">4 (simplest)</option>
+          <option value="6" selected>6</option>
+          <option value="8">8</option>
+          <option value="12">12 (most detail)</option>
+        </select>
+      </div>
+      <div>
+        <label>Grid detail</label>
+        <select id="wdGrid">
+          <option value="32,40">Coarse</option>
+          <option value="48,64" selected>Standard</option>
+          <option value="72,96">Fine</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="primary" id="wdGenerateBtn" disabled>🧵 Generate Weaving Draft</button>
+    <div class="spinner" id="wdSpinner"></div>
+    <div class="error" id="wdError"></div>
+
+    <div class="result" id="wdResult"></div>
+  </div>
+</div>
+
+<script>
+  // Tabs
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById(btn.dataset.tab).classList.add("active");
+    });
+  });
+
+  let lastDesignFilename = null;
+
+  // ---- AI Studio ----
+  const generateBtn = document.getElementById("generateBtn");
+  generateBtn.addEventListener("click", async () => {
+    const studioResult = document.getElementById("studioResult");
+    const studioError = document.getElementById("studioError");
+    const spinner = document.getElementById("studioSpinner");
+    studioResult.innerHTML = "";
+    studioError.textContent = "";
+    spinner.style.display = "block";
+    generateBtn.disabled = true;
+
+    const body = new URLSearchParams({
+      garment_type: document.getElementById("garment_type").value,
+      fabric: document.getElementById("fabric").value,
+      colour: document.getElementById("colour").value,
+      embroidery: document.getElementById("embroidery").value,
+      custom_prompt: document.getElementById("custom_prompt").value,
+    });
+
+    try {
+      const res = await fetch("/api/generate", { method: "POST", body });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Generation failed");
+
+      lastDesignFilename = data.image_url.split("/").pop();
+      document.getElementById("useLastBtn").disabled = false;
+
+      studioResult.innerHTML = `
+        <img src="${data.image_url}" alt="Generated design" />
+        <div class="badge">${data.source === "stability" ? "AI generated" : "Mock preview — add STABILITY_API_KEY for real generation"}</div>
+        <div class="prompt-preview"><strong>Prompt used:</strong><br>${data.prompt}</div>
+      `;
+    } catch (err) {
+      studioError.textContent = err.message;
+    } finally {
+      spinner.style.display = "none";
+      generateBtn.disabled = false;
+    }
+  });
+
+  // ---- Image Enhancer ----
+  const dropzone = document.getElementById("dropzone");
+  const fileInput = document.getElementById("fileInput");
+  const enhanceBtn = document.getElementById("enhanceBtn");
+  let selectedFile = null;
+
+  dropzone.addEventListener("click", () => fileInput.click());
+  dropzone.addEventListener("dragover", e => { e.preventDefault(); dropzone.classList.add("drag"); });
+  dropzone.addEventListener("dragleave", () => dropzone.classList.remove("drag"));
+  dropzone.addEventListener("drop", e => {
+    e.preventDefault();
+    dropzone.classList.remove("drag");
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files.length) handleFile(fileInput.files[0]);
+  });
+
+  function handleFile(file) {
+    selectedFile = file;
+    document.getElementById("dropzoneText").textContent = `Selected: ${file.name}`;
+    enhanceBtn.disabled = false;
+  }
+
+  enhanceBtn.addEventListener("click", async () => {
+    const enhResult = document.getElementById("enhResult");
+    const enhError = document.getElementById("enhError");
+    const spinner = document.getElementById("enhSpinner");
+    enhResult.innerHTML = "";
+    enhError.textContent = "";
+    spinner.style.display = "block";
+    enhanceBtn.disabled = true;
+
+    const formData = new FormData();
+    formData.append("image", selectedFile);
+    formData.append("scale", document.getElementById("scale").value);
+
+    try {
+      const res = await fetch("/api/enhance", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Enhancement failed");
+
+      enhResult.innerHTML = `
+        <img src="${data.image_url}" alt="Enhanced image" />
+        <div class="badge">Enhanced ✓</div>
+      `;
+    } catch (err) {
+      enhError.textContent = err.message;
+    } finally {
+      spinner.style.display = "none";
+      enhanceBtn.disabled = false;
+    }
+  });
+
+  // ---- Weaving Draft ----
+  const wdDropzone = document.getElementById("wdDropzone");
+  const wdFileInput = document.getElementById("wdFileInput");
+  const wdGenerateBtn = document.getElementById("wdGenerateBtn");
+  const useLastBtn = document.getElementById("useLastBtn");
+  let wdSelectedFile = null;
+  let wdUseLast = false;
+
+  wdDropzone.addEventListener("click", () => wdFileInput.click());
+  wdDropzone.addEventListener("dragover", e => { e.preventDefault(); wdDropzone.classList.add("drag"); });
+  wdDropzone.addEventListener("dragleave", () => wdDropzone.classList.remove("drag"));
+  wdDropzone.addEventListener("drop", e => {
+    e.preventDefault();
+    wdDropzone.classList.remove("drag");
+    if (e.dataTransfer.files.length) wdHandleFile(e.dataTransfer.files[0]);
+  });
+  wdFileInput.addEventListener("change", () => {
+    if (wdFileInput.files.length) wdHandleFile(wdFileInput.files[0]);
+  });
+
+  function wdHandleFile(file) {
+    wdSelectedFile = file;
+    wdUseLast = false;
+    document.getElementById("wdDropzoneText").textContent = `Selected: ${file.name}`;
+    wdGenerateBtn.disabled = false;
+  }
+
+  useLastBtn.addEventListener("click", () => {
+    wdUseLast = true;
+    wdSelectedFile = null;
+    document.getElementById("wdDropzoneText").textContent = "Click to choose an image, or drag one here";
+    wdGenerateBtn.disabled = false;
+  });
+
+  wdGenerateBtn.addEventListener("click", async () => {
+    const wdResult = document.getElementById("wdResult");
+    const wdError = document.getElementById("wdError");
+    const spinner = document.getElementById("wdSpinner");
+    wdResult.innerHTML = "";
+    wdError.textContent = "";
+    spinner.style.display = "block";
+    wdGenerateBtn.disabled = true;
+
+    const [gc, gr] = document.getElementById("wdGrid").value.split(",");
+    const formData = new FormData();
+    if (wdUseLast && lastDesignFilename) {
+      formData.append("source_file", lastDesignFilename);
+    } else if (wdSelectedFile) {
+      formData.append("image", wdSelectedFile);
+    }
+    formData.append("n_colors", document.getElementById("wdColors").value);
+    formData.append("grid_cols", gc);
+    formData.append("grid_rows", gr);
+
+    try {
+      const res = await fetch("/api/weave-draft", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Weaving draft failed");
+
+      const scoreColor = data.score >= 75 ? "#2e7d32" : data.score >= 50 ? "#b8860b" : "#b3261e";
+      const swatches = data.palette.map(p =>
+        `<span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:${p.hex};border:1px solid #ccc;margin-right:4px;vertical-align:middle;" title="${p.hex} — ${p.coverage_pct}%"></span>`
+      ).join("");
+
+      wdResult.innerHTML = `
+        <img src="${data.image_url}" alt="Weaving draft" />
+        <div class="badge" style="background:${scoreColor};color:white;">
+          Weavability score: ${data.score}/100 — ${data.score_label}
+        </div>
+        <div class="prompt-preview">
+          <strong>Palette:</strong><br>${swatches}<br><br>
+          <strong>Breakdown:</strong> colour ${data.breakdown.color_score}/100 ·
+          detail ${data.breakdown.detail_score}/100 · repeat bonus +${data.breakdown.repeat_bonus}<br><br>
+          <em>${data.disclaimer}</em>
+        </div>
+      `;
+    } catch (err) {
+      wdError.textContent = err.message;
+    } finally {
+      spinner.style.display = "none";
+      wdGenerateBtn.disabled = false;
+    }
+  });
+</script>
+
+</body>
+</html>
